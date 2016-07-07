@@ -5,7 +5,10 @@
 - 支持hot code push
     
 ## 命令行安装:
-  sudo npm install -g http://git.n.xiaomi.com/chenxiaodong/viper-server.git --registry=https://registry.npm.taobao.org
+  sudo npm install -g git+ssh://git@git.n.xiaomi.com:chenxiaodong/viper-server.git (--registry=https://registry.npm.taobao.org)
+  OR
+  git clone git@git.n.xiaomi.com:chenxiaodong/viper-server.git
+  npm install -g ./viper-server (--registry=https://registry.npm.taobao.org)
 
 ## 启动:
   cd workdir

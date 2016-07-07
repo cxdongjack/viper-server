@@ -1,5 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env node
 
-base=`dirname $0`
-node $base/../server.js
+require('../server.js');
 

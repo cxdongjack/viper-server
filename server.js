@@ -13,7 +13,12 @@ var watch = require('node-watch');
 var app = express();
 var server = http.createServer(app);
 var io = socketIO.listen(server);
-var options = require(process.cwd() + '/start.conf.js');
+try {
+    var options = require(process.cwd() + '/start.conf.js');
+} catch(e) {
+    console.log('请在目录下配置start.conf.js');
+    return;
+}
 var cwd = process.cwd() + (options.entry ? '/' + options.entry : '');
 var port = options.port || 6007;
 

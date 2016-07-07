@@ -13,16 +13,17 @@ var watch = require('node-watch');
 var app = express();
 var server = http.createServer(app);
 var io = socketIO.listen(server);
+var options = {};
+var config = process.argv[2] || 'start.conf.js';
 try {
-    var options = require(process.cwd() + '/start.conf.js');
+    options = require(process.cwd() + '/' + config);
 } catch(e) {
-    console.log('请在目录下配置start.conf.js');
-    return;
+    config = undefined;
 }
 var cwd = process.cwd() + (options.entry ? '/' + options.entry : '');
 var port = options.port || 6007;
 
-console.log('cwd:', cwd, 'port:', port);
+console.log('cwd:', cwd, 'port:', port, 'config:', config);
 server.listen(port);
 
 // watch .js and .css files

@@ -1,0 +1,16 @@
+<script src="/socket.io/socket.io.js"></script>  
+<script>
+  socket = io.connect('/');
+  socket.on('reload', function(uri) {
+      console.log('file changed', uri);
+      //location.reload()
+      if (/css$/.test(uri)) {
+          document.body.insertAdjacentHTML('beforeend', '<link rel="stylesheet" type="text/css"  href="' + uri + '">');
+      } else {
+        var $script = document.createElement('script');
+        $script.src = uri;
+        document.body.appendChild($script);
+        window.app__init();
+      }
+  });
+</script>

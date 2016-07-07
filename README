@@ -1,0 +1,13 @@
+# viper server
+- 提供静态服务
+- 服务器合并all.js|css
+- 支持livereload
+- 支持hot code push
+    
+## 命令行安装:
+  sudo npm install -g http://git.n.xiaomi.com/chenxiaodong/viper-server.git --registry=https://registry.npm.taobao.org
+
+## 启动:
+  cd workdir
+  # may add start.conf.js
+  viper

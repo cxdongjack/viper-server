@@ -132,6 +132,7 @@ app.use(express.static(cwd));
 // 启动代理服务
 //https://webpack.github.io/docs/webpack-dev-server.html
 //https://github.com/webpack/webpack-dev-server/blob/master/lib/Server.js
+//https://github.com/nodejitsu/node-http-proxy
 if (options.proxy) {
     if (typeof options.proxy === 'string') {
         options.proxy = [{
@@ -159,6 +160,10 @@ if (options.proxy) {
 
     options.proxy.forEach(function(proxyConfig) {
         var context = proxyConfig.context || proxyConfig.path;
+        // 默认打开changeOrigin
+        if (proxyConfig.changeOrigin === undefined) {
+            proxyConfig.changeOrigin = true;
+        }
 
         app.use(function(req, res, next) {
             if (typeof proxyConfig.bypass === 'function') {

@@ -10,6 +10,9 @@
         var $script = document.createElement('script');
         $script.src = uri;
         document.body.appendChild($script);
+        window.app__init = window.app__init || function() {
+            location.reload();
+        };
         window.app__init();
       }
   });

@@ -1,5 +1,5 @@
 {
-  "name": "@mi/viper-server",
+  "name": "viper-server",
   "version": "1.0.0",
   "description": "",
   "main": "server.js",

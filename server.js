@@ -90,13 +90,29 @@ app.use('**/all.css', function(req, res) {
     var filepath = cwd + req.baseUrl;
     var all = parseAllCSS(filepath);
     var cnt = all.map(function(filepath) {
-        return fs.readFileSync(filepath, 'utf8');
+        var cnt = fs.readFileSync(filepath, 'utf8');
+        return replaceUrlInCSS(cnt, filepath, cwd);
     }).join('\n\n');
     cnt = cnt.replace(/@import.*?\n/g, '');
 
     res.setHeader("Content-Type", "text/css");
     res.send(cnt);
 });
+
+function replaceUrlInCSS(cnt, filepath, cwd) {
+    return cnt.replace(/url\((.+?)\)/g, function(match, url) {
+      url = url.replace(/'|"/g, '');
+      if (!/^http/.test(url)) {
+        url = redirectUrl(filepath, url, cwd);
+      }
+      return 'url(' + url + ')';
+    });
+}
+
+function redirectUrl(filepath, url, base) {
+    var absUrl = path.dirname(filepath) + '/' + url;
+    return absUrl.replace(base, '');
+}
 
 function parseAllCSS(filepath) {
     var deps = [];

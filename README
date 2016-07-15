@@ -23,6 +23,10 @@ $ alias xnpm="npm --registry=http://registry.npm.pt.mi.com \
   cd <workdir>
   viper <config>
 
+  OR
+
+  viper http://www.duokan.com 6008
+
 ## 配置文件
 可选，默认会查找当前目录下的start.conf.js
 

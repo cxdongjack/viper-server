@@ -19,6 +19,8 @@ try {
     options = require(process.cwd() + '/' + config);
 } catch(e) {
     config = undefined;
+    options.proxy = {'/' : process.argv[2]};
+    options.port = process.argv[3];
 }
 var cwd = process.cwd() + (options.entry ? '/' + options.entry : '');
 var port = options.port || 6007;
@@ -47,14 +49,17 @@ app.use('**/index.html', function(req, res) {
 });
 
 // 所有all.js在服务器合并
-app.use('**/all.js', function(req, res) {
+app.use('**/all.js', function(req, res, next) {
     var filepath = cwd + req.baseUrl;
+    if (!fs.existsSync(filepath)) {
+        return next();
+    }
     var all = parseAllJS(filepath);
     var cnt = all.map(function(filepath) {
         var cnt = fs.readFileSync(filepath, 'utf8');
         // 如果在all.js包含css, 直接转换成js
         if (/css$/.test(filepath)) {
-            cnt = "document.body.insertAdjacentHTML('beforeend', '<style>" + cnt + "</style>')";
+            cnt = "document.body.insertAdjacentHTML('beforeend', '<style>" + cnt + "</style>');";
             cnt = cnt.replace(/\n/g, '');
         }
         return cnt;
@@ -86,8 +91,11 @@ function parseAllJS(filepath) {
 }
 
 // 所有all.css在服务器合并
-app.use('**/all.css', function(req, res) {
+app.use('**/all.css', function(req, res, next) {
     var filepath = cwd + req.baseUrl;
+    if (!fs.existsSync(filepath)) {
+        return next();
+    }
     var all = parseAllCSS(filepath);
     var cnt = all.map(function(filepath) {
         var cnt = fs.readFileSync(filepath, 'utf8');

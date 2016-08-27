@@ -29,14 +29,14 @@ console.log('cwd:', cwd, 'port:', port, 'config:', config);
 server.listen(port);
 
 // watch .js and .css files
-watch(cwd, function(file) {
-    if (!/\.js|\.css$/i.test(file)) {
+watch(cwd, Function__debounce(function(file) {
+    if (!/\.js|\.css|\.html|\.tpl$/i.test(file)) {
         return;
     }
     var path = file.replace(cwd, '');
     console.log('file', file, 'changed', 'path:', path);
     io.sockets.emit('reload', path) //send a message to all clients
-});
+}, 100));
 
 // 所有index.html注入socket相关脚本
 app.use('**/index.html', function(req, res) {
@@ -49,7 +49,7 @@ app.use('**/index.html', function(req, res) {
 });
 
 // 所有all.js在服务器合并
-app.use('**/all.js', function(req, res, next) {
+app.use('**/__all.js', function(req, res, next) {
     var filepath = cwd + req.baseUrl;
     if (!fs.existsSync(filepath)) {
         return next();
@@ -59,7 +59,7 @@ app.use('**/all.js', function(req, res, next) {
         var cnt = fs.readFileSync(filepath, 'utf8');
         // 如果在all.js包含css, 直接转换成js
         if (/css$/.test(filepath)) {
-            cnt = "document.body.insertAdjacentHTML('beforeend', '<style>" + cnt + "</style>');";
+            cnt = "document.body.insertAdjacentHTML('beforeend', '<style>" + cnt.replace(/'/g, '"') + "</style>');";
             cnt = cnt.replace(/\n/g, '');
         }
         return cnt;
@@ -91,7 +91,7 @@ function parseAllJS(filepath) {
 }
 
 // 所有all.css在服务器合并
-app.use('**/all.css', function(req, res, next) {
+app.use('**/__all.css', function(req, res, next) {
     var filepath = cwd + req.baseUrl;
     if (!fs.existsSync(filepath)) {
         return next();
@@ -129,9 +129,9 @@ function parseAllCSS(filepath) {
         var lines = cnt.split('\n');
         var ret = [];
         lines.forEach(function(line) {
-            var match = line.match(/@import \"(.+)\"/);
+            var match = line.match(/@import (["'])([^'"]+)\1/);
             if (match) {
-                ret.push(match[1]);
+                ret.push(match[2]);
             }
         });
         return ret;
@@ -201,4 +201,20 @@ if (options.proxy) {
             next();
         }, httpProxyMiddleware(context, proxyConfig));
     });
+}
+
+//--- helper ----------------------------------------------
+function Function__debounce(func, wait) {
+    var timer;
+
+    return function() {
+        var context = this,
+            args = arguments;
+
+        clearTimeout(timer);
+
+        timer = setTimeout(function() {
+            func.apply(context, args);
+        }, wait);
+    };
 }

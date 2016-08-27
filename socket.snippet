@@ -1,22 +1,88 @@
 <script src="/socket.io/socket.io.js"></script>  
 <script>
-  socket = io.connect('/');
-  socket.on('reload', function(uri) {
-      console.log('file changed', uri);
-      //location.reload()
-      if (/css$/.test(uri)) {
-          document.body.insertAdjacentHTML('beforeend', '<link rel="stylesheet" type="text/css"  href="' + uri + '">');
-      } else {
+socket = io.connect('/');
+socket.on('reload', function(uri) {
+    console.warn('file changed', uri);
+    if (/css$/.test(uri)) {
+        updateStyle(uri);
+    } else if (/js$/.test(uri)) {
+        updateScript(uri);
+    } else {
+        location.reload();
+    }
+    return;
+
+    function updateStyle(path) {
+        var $$links = document.querySelectorAll('link[rel="stylesheet"]');
+        var urls = [].map.call($$links, function(el) {
+            return el.href;
+        });
+        var absUrl, index;
+
+        // 尝试目标URL
+        absUrl = loader__absURL(path);
+        index = urls.indexOf(absUrl);
+
+        // 如果找不到，尝试查找all.js
+        if (index === -1) {
+            absUrl = loader__absURL('all.css');
+            index = urls.indexOf(absUrl);
+        }
+
+        if (index === -1) {
+            return;
+        }
+
+        // 重新加载
+        $$links[index].href = absUrl;
+
+        return;
+    }
+    function updateScript(path) {
+        var $$scripts = document.querySelectorAll('script');
+        var urls = [].map.call($$scripts, function(el) {
+            return el.src;
+        });
+        var absUrl, index;
+
+        // 尝试目标URL
+        absUrl = loader__absURL(path);
+        index = urls.indexOf(absUrl);
+
+        // 如果找不到，尝试查找all.js
+        if (index === -1) {
+            absUrl = loader__absURL('all.js');
+            index = urls.indexOf(absUrl);
+        }
+
+        if (index === -1) {
+            return;
+        }
+
+        // 重置debug__reload
+        window.debug__reload = null;
+        // 重新加载
         var $script = document.createElement('script');
-        $script.src = uri;
-        document.body.appendChild($script);
+        loader__insertBefore($$scripts[index], $script);
+        $$scripts[index].remove();
+        $script.src = absUrl;
         $script.onload = function() {
-            var reload = window.debug__reload || window.app__init;
+            var reload = window.debug__reload;
             if (!reload) {
                 return location.reload();
             }
             reload();
         };
-      }
-  });
+
+        return;
+    }
+    function loader__insertBefore($el, $node) {
+        return $el.parentNode.insertBefore($node, $el.nextSbiling);
+    }
+    function loader__absURL(url) {
+        var a = document.createElement('a');
+        a.href = url;
+        return a.href;
+    }
+});
 </script>

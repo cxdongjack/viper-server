@@ -23,9 +23,11 @@ socket.on('reload', function(uri) {
         absUrl = loader__absURL(path);
         index = urls.indexOf(absUrl);
 
-        // 如果找不到，尝试查找all.js
+        // 如果找不到，尝试查找all.css?__combo
         if (index === -1) {
-            absUrl = loader__absURL('all.css');
+            absUrl = urls.filter(function(item) {
+                return /css\?__combo/.test(item);
+            })[0];
             index = urls.indexOf(absUrl);
         }
 
@@ -49,9 +51,11 @@ socket.on('reload', function(uri) {
         absUrl = loader__absURL(path);
         index = urls.indexOf(absUrl);
 
-        // 如果找不到，尝试查找all.js
+        // 如果找不到，尝试查找all.js?__combo
         if (index === -1) {
-            absUrl = loader__absURL('all.js');
+            absUrl = urls.filter(function(item) {
+                return /js\?__combo/.test(item);
+            })[0];
             index = urls.indexOf(absUrl);
         }
 

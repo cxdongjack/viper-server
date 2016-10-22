@@ -1,11 +1,18 @@
 module.exports = {
-    entry : 'src',
-    port : 6007,
+    entry : '',
+    port : 6002,
     proxy : {
         '/': {
-            target: 'http://www.duokan.com',
+            target: 'http://127.0.0.1:6004',
+            secure: false,
+            bypass: function(req, res, next, proxyOptions) {
+                if (req.url.match(/^\/hs\/(feed|home|search|book|prefer|market|user|comment)(\/.*)?/)) {
+                    res.redirect('/src/app/phone/index.html?' + req.url);
+                    return;
+                }
+
+                next();
+            }
         }
     }
 };
-
-

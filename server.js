@@ -9,6 +9,7 @@ var express = require('express');
 var socketIO = require('socket.io');
 var httpProxyMiddleware = require("http-proxy-middleware");
 var watch = require('node-watch');
+var tmpl = require("./tmpl");
 
 var app = express();
 var server = http.createServer(app);
@@ -21,6 +22,7 @@ try {
     config = undefined;
     options.proxy = {'/' : process.argv[2]};
     options.port = process.argv[3];
+    options.watch = {};
 }
 var cwd = process.cwd() + (options.entry ? '/' + options.entry : '');
 var port = options.port || 6007;
@@ -28,59 +30,99 @@ var port = options.port || 6007;
 console.log('cwd:', cwd, 'port:', port, 'config:', config);
 server.listen(port);
 
+var watching = options.watch;
 // watch .js and .css files
-watch(cwd, Function__debounce(function(file) {
-    if (!/\.js|\.css|\.html|\.tpl$/i.test(file)) {
-        return;
-    }
-    var path = file.replace(cwd, '');
-    console.log('file', file, 'changed', 'path:', path);
-    io.sockets.emit('reload', path) //send a message to all clients
-}, 100));
+watching[cwd] = /\.js|\.css|\.html$/i;
+Object.keys(watching).forEach(function(dir) {
+    watchDir(dir, watching[dir]);
+});
+
+function watchDir(dir, regexp, throttle) {
+    console.log('Watching ' + dir, 'with ' + regexp);
+    watch(dir, Function__throttle(function(file) {
+        if (!regexp.test(file)) {
+            return;
+        }
+
+        var path = file.replace(cwd, '');
+        console.log('file', file, 'changed', 'path:', path);
+        io.sockets.emit('reload', path) //send a message to all clients
+    }, throttle || 100));
+}
 
 // 所有index.html注入socket相关脚本
-app.use('**/index.html', function(req, res) {
+function injectWatcher(req, res) {
     var filepath = cwd + req.baseUrl;
     var cnt = fs.readFileSync(filepath, 'utf8');
     var socketSnippet = fs.readFileSync(__dirname + '/socket.snippet', 'utf8');
     // 在</body>节点之前插入scoket脚本
     cnt = cnt.replace(/(\<\/body\>)|$/, socketSnippet + '$1')
     res.send(cnt);
-});
+};
+
+app.use('**/index.html', injectWatcher);
+app.use('**/test.html', injectWatcher);
 
 // 所有all.js在服务器合并
-app.use('**/__all.js', function(req, res, next) {
+app.use('**/all.js', function(req, res, next) {
+    // 只有__combo才触发合并
+    if (!/__combo/.test(req.originalUrl)) {
+        return next();
+    }
+
     var filepath = cwd + req.baseUrl;
     if (!fs.existsSync(filepath)) {
         return next();
     }
     var all = parseAllJS(filepath);
-    var cnt = all.map(function(filepath) {
-        var cnt = fs.readFileSync(filepath, 'utf8');
-        // 如果在all.js包含css, 直接转换成js
-        if (/css$/.test(filepath)) {
-            cnt = "document.body.insertAdjacentHTML('beforeend', '<style>" + cnt.replace(/'/g, '"') + "</style>');";
-            cnt = cnt.replace(/\n/g, '');
-        }
-        return cnt;
+
+    var cnt = all.filter(function(filepath) {
+        // 忽略all.js中包含的css文件
+        return /\.js$/.test(filepath);
+    }).map(function(filepath) {
+        return fs.readFileSync(path.normalize(filepath), 'utf8');
     }).join('\n\n');
+
+    var hasCss = all.find(function(filepath) {
+        return /\.css$/.test(filepath);
+    });
+    if (hasCss) {
+        var allCSS = req.baseUrl.replace(/\.js$/, '.css');
+        cnt = `
+/* 自动生成请勿修改 */
+var hasCSS = [].filter.call(document.querySelectorAll('link[href]'), function(el) {
+    return /css\\?__combo/.test(el.href);
+})[0];
+
+if (!hasCSS) {
+    document.head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="${allCSS}?__combo">');
+}
+/* @自动生成请勿修改 */
+
+` + cnt;
+    }
 
     res.setHeader("Content-Type", "application/javascript");
     res.send(cnt);
 });
 
 function parseAllJS(filepath) {
+    var _cache = [];
     var deps = [];
     var include = function(list) {
         return list;
     };
 
     (function _readDeps(filepath) {
+        if (_cache.indexOf(filepath) !== -1) {
+            return;
+        }
+        _cache.push(filepath);
         var cnt = fs.readFileSync(filepath, 'utf8');
         if (cnt.indexOf('include([') === 0) {
             var files = eval(cnt);
             for (var i = 0, dep; dep = files[i]; i++) {
-                _readDeps(path.dirname(filepath) + '/' + dep);
+                _readDeps(path.normalize(path.dirname(filepath) + '/' + dep));
             }
         } else {
             deps.push(filepath);
@@ -91,20 +133,45 @@ function parseAllJS(filepath) {
 }
 
 // 所有all.css在服务器合并
-app.use('**/__all.css', function(req, res, next) {
-    var filepath = cwd + req.baseUrl;
-    if (!fs.existsSync(filepath)) {
+app.use('**/all.css', function(req, res, next) {
+    // 只有__combo才触发合并
+    if (!/__combo/.test(req.originalUrl)) {
         return next();
     }
-    var all = parseAllCSS(filepath);
-    var cnt = all.map(function(filepath) {
-        var cnt = fs.readFileSync(filepath, 'utf8');
+
+    var cssFilepath = cwd + req.baseUrl;
+    var jsFilepath = cssFilepath.replace(/\.css$/, '.js');
+
+    if (!fs.existsSync(cssFilepath) && !fs.existsSync(jsFilepath)) {
+        return next();
+    }
+
+    var cssPaths = [];
+    // 由all.css引用的样式表
+    if (fs.existsSync(cssFilepath)) {
+        cssPaths = cssPaths.concat(parseAllCSS(cssFilepath));
+    }
+
+    // 提取all.js中包含的css文件
+    if (fs.existsSync(jsFilepath)) {
+        cssPaths = cssPaths.concat(parseAllJS(jsFilepath).filter(function(filepath) {
+            return /\.css$/.test(filepath);
+        }));
+    }
+
+    // 排重
+    cssPaths = cssPaths.map(path.normalize).filter(function(value, index, arr) {
+        return arr.indexOf(value) === index;
+    });
+
+    // 合并内容
+    var cssCnt = cssPaths.map(function(filepath) {
+        var cnt = fs.readFileSync(path.normalize(filepath), 'utf8');
         return replaceUrlInCSS(cnt, filepath, cwd);
-    }).join('\n\n');
-    cnt = cnt.replace(/@import.*?\n/g, '');
+    }).join('\n\n').replace(/@import.*?\n/g, '');
 
     res.setHeader("Content-Type", "text/css");
-    res.send(cnt);
+    res.send(cssCnt);
 });
 
 function replaceUrlInCSS(cnt, filepath, cwd) {
@@ -138,7 +205,7 @@ function parseAllCSS(filepath) {
     }
 
     (function _readDeps(filepath) {
-        var paths = getPath(fs.readFileSync(filepath, 'utf8'));
+        var paths = getPath(fs.readFileSync(path.normalize(filepath), 'utf8'));
         if (paths.length) {
             for (var i = 0, dep; dep = paths[i]; i++) {
                 _readDeps(path.dirname(filepath) + '/' + dep);
@@ -149,6 +216,41 @@ function parseAllCSS(filepath) {
 
     return deps;
 }
+
+// include.js使用服务器端版本
+app.use('**/include.js', function(req, res, next) {
+    res.send(fs.readFileSync(__dirname + '/include.js', 'utf8'));
+});
+
+// 合并lib/all.js
+app.use('**/lib/all.js', function(req, res, next) {
+    var filepath = cwd + req.baseUrl;
+    if (!fs.existsSync(filepath)) {
+        return next();
+    }
+    var all = parseAllJS(filepath);
+
+    var cnt = all.filter(function(filepath) {
+        // 忽略all.js中包含的css文件
+        return /\.js$/.test(filepath);
+    }).map(function(filepath) {
+        return fs.readFileSync(path.normalize(filepath), 'utf8');
+    }).join('\n\n');
+
+    res.send(cnt);
+});
+
+// *.js在服务器端转译
+app.use('**/*.js', function(req, res, next) {
+    var filepath = cwd + req.baseUrl;
+    if (!fs.existsSync(filepath)) {
+        return next();
+    }
+
+    var cnt = tmpl(fs.readFileSync(path.normalize(filepath), 'utf8'));
+
+    res.send(cnt);
+});
 
 // 启动静态服务
 app.use(express.static(cwd));
@@ -191,11 +293,8 @@ if (options.proxy) {
 
         app.use(function(req, res, next) {
             if (typeof proxyConfig.bypass === 'function') {
-                var bypassUrl = proxyConfig.bypass(req, res, proxyConfig) || false;
-
-                if (bypassUrl) {
-                    req.url = bypassUrl;
-                }
+                proxyConfig.bypass(req, res, next, proxyConfig);
+                return;
             }
 
             next();
@@ -204,17 +303,19 @@ if (options.proxy) {
 }
 
 //--- helper ----------------------------------------------
-function Function__debounce(func, wait) {
-    var timer;
-
+function Function__throttle(func, wait) {
+    var context, args, result;
+    var previous = 0;
     return function() {
-        var context = this,
-            args = arguments;
-
-        clearTimeout(timer);
-
-        timer = setTimeout(function() {
-            func.apply(context, args);
-        }, wait);
+        var now = new Date();
+        var remaining = wait - (now - previous);
+        context = this;
+        args = arguments;
+        if (remaining <= 0) {
+            previous = now;
+            result = func.apply(context, args);
+        }
+        return result;
     };
 }
+

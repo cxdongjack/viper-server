@@ -10,6 +10,7 @@ var socketIO = require('socket.io');
 var httpProxyMiddleware = require("http-proxy-middleware");
 var watch = require('node-watch');
 var tmpl = require("./tmpl");
+var file = require("./file");
 
 var app = express();
 var server = http.createServer(app);
@@ -124,7 +125,7 @@ function parseAllJS(filepath) {
         if (cnt.indexOf('include([') === 0) {
             var files = eval(cnt);
             for (var i = 0, dep; dep = files[i]; i++) {
-                _readDeps(path.normalize(path.dirname(filepath) + '/' + dep));
+                _readDeps(file.abspath(dep, path.dirname(filepath)));
             }
         } else {
             deps.push(filepath);

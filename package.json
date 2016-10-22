@@ -1,86 +1,22 @@
 {
-  "_args": [
-    [
-      {
-        "raw": "@mi/viper-server",
-        "scope": "@mi",
-        "escapedName": "@mi%2fviper-server",
-        "name": "@mi/viper-server",
-        "rawSpec": "",
-        "spec": "latest",
-        "type": "tag"
-      },
-      "/Users/chenxiaodong/duokan/demo"
-    ]
-  ],
-  "_cnpm_publish_time": 1471488647722,
-  "_from": "@mi/viper-server@latest",
-  "_id": "@mi/viper-server@1.0.3",
-  "_inCache": true,
-  "_installable": true,
-  "_location": "/@mi/viper-server",
-  "_nodeVersion": "6.3.0",
-  "_npmUser": {
-    "name": "chenxiaodong",
-    "email": "chenxiaodong@xiaomi.com"
-  },
-  "_npmVersion": "3.10.3",
-  "_phantomChildren": {},
-  "_publish_on_cnpm": true,
-  "_requested": {
-    "raw": "@mi/viper-server",
-    "scope": "@mi",
-    "escapedName": "@mi%2fviper-server",
-    "name": "@mi/viper-server",
-    "rawSpec": "",
-    "spec": "latest",
-    "type": "tag"
-  },
-  "_requiredBy": [
-    "#DEV:/",
-    "#USER"
-  ],
-  "_resolved": "http://registry.npm.pt.mi.com/@mi/viper-server/download/@mi/viper-server-1.0.3.tgz",
-  "_shasum": "76868791479ffcadfed547ae9ec939b2bdae2b1e",
-  "_shrinkwrap": null,
-  "_spec": "@mi/viper-server",
-  "_where": "/Users/chenxiaodong/duokan/demo",
-  "author": {
-    "name": "chenxiaodong"
-  },
-  "bin": {
-    "viper": "bin/viper"
-  },
+  "name": "viper-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
   "dependencies": {
     "express": "~4.14.0",
     "http-proxy-middleware": "~0.17.0",
-    "node-watch": "~0.3.5",
-    "socket.io": "~1.4.8"
+    "socket.io": "~1.4.8",
+    "node-watch": "~0.3.5"
   },
-  "description": "多看::静态服务",
   "devDependencies": {},
-  "dist": {
-    "shasum": "76868791479ffcadfed547ae9ec939b2bdae2b1e",
-    "size": 3899,
-    "key": "/@mi/viper-server/-/@mi/viper-server-1.0.3.tgz",
-    "tarball": "http://registry.npm.pt.mi.com/@mi/viper-server/download/@mi/viper-server-1.0.3.tgz"
+  "bin" : {
+    "viper" : "bin/viper"
   },
-  "gitHead": "7a2580562ddb94368d1af1ca12fdb2534507b90e",
-  "license": "BSD-2-Clause",
-  "main": "server.js",
-  "maintainers": [
-    {
-      "name": "chenxiaodong",
-      "email": "chenxiaodong@xiaomi.com"
-    }
-  ],
-  "name": "@mi/viper-server",
-  "optionalDependencies": {},
-  "readme": "ERROR: No README data found!",
-  "readmeFilename": "README",
   "scripts": {
-    "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
   },
-  "version": "1.0.3"
+  "author": "chenxiaodong",
+  "license": "BSD-2-Clause"
 }

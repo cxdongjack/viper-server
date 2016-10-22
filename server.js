@@ -20,16 +20,18 @@ try {
     options = require(process.cwd() + '/' + config);
 } catch(e) {
     config = undefined;
-    options.proxy = {'/' : process.argv[2]};
-    options.port = process.argv[3];
-    options.watch = {};
+    options.proxy = process.argv[3] && {'/' : process.argv[3]};
+    options.port = process.argv[2];
 }
 var cwd = process.cwd() + (options.entry ? '/' + options.entry : '');
 var port = options.port || 6007;
+// 禁止并行加载(在服务端预先转译JS文件)
+var disableParallel = options.disableParallel || process.argv[4];
 
 console.log('cwd:', cwd, 'port:', port, 'config:', config);
 server.listen(port);
 
+options.watch = options.watch || {};
 var watching = options.watch;
 // watch .js and .css files
 watching[cwd] = /\.js|\.css|\.html$/i;
@@ -217,40 +219,12 @@ function parseAllCSS(filepath) {
     return deps;
 }
 
-// include.js使用服务器端版本
-app.use('**/include.js', function(req, res, next) {
-    res.send(fs.readFileSync(__dirname + '/include.js', 'utf8'));
-});
-
-// 合并lib/all.js
-app.use('**/lib/all.js', function(req, res, next) {
-    var filepath = cwd + req.baseUrl;
-    if (!fs.existsSync(filepath)) {
-        return next();
-    }
-    var all = parseAllJS(filepath);
-
-    var cnt = all.filter(function(filepath) {
-        // 忽略all.js中包含的css文件
-        return /\.js$/.test(filepath);
-    }).map(function(filepath) {
-        return fs.readFileSync(path.normalize(filepath), 'utf8');
-    }).join('\n\n');
-
-    res.send(cnt);
-});
-
-// *.js在服务器端转译
-app.use('**/*.js', function(req, res, next) {
-    var filepath = cwd + req.baseUrl;
-    if (!fs.existsSync(filepath)) {
-        return next();
-    }
-
-    var cnt = tmpl(fs.readFileSync(path.normalize(filepath), 'utf8'));
-
-    res.send(cnt);
-});
+// 启动加速, 服务器端转译文件
+if (!disableParallel) {
+    app.use('**/include.js', speedUpIncludeJs);
+    app.use('**/lib/all.js', speedUpLibJs);
+    app.use('**/*.js', speedUpJs);
+}
 
 // 启动静态服务
 app.use(express.static(cwd));
@@ -319,3 +293,37 @@ function Function__throttle(func, wait) {
     };
 }
 
+// include.js使用服务器端版本
+function speedUpIncludeJs(req, res, next) {
+    res.send(fs.readFileSync(__dirname + '/include.js', 'utf8'));
+}
+
+// 合并lib/all.js
+function speedUpLibJs(req, res, next) {
+    var filepath = cwd + req.baseUrl;
+    if (!fs.existsSync(filepath)) {
+        return next();
+    }
+    var all = parseAllJS(filepath);
+
+    var cnt = all.filter(function(filepath) {
+        // 忽略all.js中包含的css文件
+        return /\.js$/.test(filepath);
+    }).map(function(filepath) {
+        return fs.readFileSync(path.normalize(filepath), 'utf8');
+    }).join('\n\n');
+
+    res.send(cnt);
+}
+
+// *.js在服务器端转译
+function speedUpJs(req, res, next) {
+    var filepath = cwd + req.baseUrl;
+    if (!fs.existsSync(filepath)) {
+        return next();
+    }
+
+    var cnt = tmpl(fs.readFileSync(path.normalize(filepath), 'utf8'));
+
+    res.send(cnt);
+}

@@ -3,10 +3,11 @@ function loader__template(tmpl) {
         return code.replace(/\\('|\\)/g, "$1").replace(/[\r\t\n]/g, " ");
     }
     var c = {
-        func : /{{#\s*([\w$]+)\s*(\([^)]*\)|)\s*}}([\s\S]*?){{#}}/g,
+        func :       /{{#\s*([\w$]+)\s*(\([^)]*\)|)\s*}}([\s\S]*?){{#}}/g,
         evaluate:    /\{\{([\s\S]+?(\}?)+)\}\}/g,
         interpolate: /\{\{=([\s\S]+?)\}\}/g,
         conditional: /\{\{\?(\?)?\s*([\s\S]*?)\s*\}\}/g,
+        transclude:  /\{\{\-(\-)?\s*([\w$]*)\s*(\(([^)]*)\)|)\s*\}\}/g,
         iterate:     /\{\{~\s*(?:\}\}|([\s\S]+?)\s*\:\s*([\w$]+)\s*(?:\:\s*([\w$]+))?\s*\}\})/g,
     };
     var cse = {
@@ -22,7 +23,7 @@ function loader__template(tmpl) {
         //str = str.replace(/(^|\r|\n)\t* +| +\t*(\r|\n|$)/g,"")
             //.replace(/\r|\n|\t/g,"")
         // 拼接方法名
-        str = "function " + def + (args || "{}") + " {var out='" + str;
+        str = "function " + def + (args || "()") + " {var out='" + str;
         // 替换各种标志符
         str = str
             .replace(c.interpolate, function(m, code) {
@@ -32,6 +33,20 @@ function loader__template(tmpl) {
                 return elsecase ?
                     (code ? "';}else if(" + unescape(code) + ") {out+='" : "';}else {out+='") :
                     (code ? "';if(" + unescape(code) + ") {out+='" : "';}out+='");
+            })
+            .replace(c.transclude, function(m, elsecase, def, argsBody, args) {
+                function formatCode() {
+                    var code = def;
+                    if (argsBody && /\S+/.test(args)) {
+                        code = code + '(' + args + ', ';
+                    } else {
+                        code = code + '('
+                    }
+                    return code;
+                }
+                return elsecase ?
+                    "';return out;})(), (function() {var out='';out+='":
+                    (def ? "';out+=" + unescape(formatCode()) + "(function() {var out=''; out+='" : "';return out;})());out+='");
             })
             .replace(c.iterate, function(m, iterate, vname, iname) {
                 if (!iterate) return "';} } out+='";
@@ -51,6 +66,6 @@ function loader__template(tmpl) {
         return str;
     });
     return tmpl;
-};
+}
 
 module.exports = loader__template;

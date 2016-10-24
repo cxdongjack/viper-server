@@ -7,7 +7,7 @@ function loader__template(tmpl) {
         evaluate:    /\{\{([\s\S]+?(\}?)+)\}\}/g,
         interpolate: /\{\{=([\s\S]+?)\}\}/g,
         conditional: /\{\{\?(\?)?\s*([\s\S]*?)\s*\}\}/g,
-        transclude:  /\{\{\-(\-)?\s*([\w$]*)\s*(\(([^)]*)\)|)\s*\}\}/g,
+        transclude:  /\{\{\-(\-)?\s*([\s\S]*?)\s*\}\}/g,
         iterate:     /\{\{~\s*(?:\}\}|([\s\S]+?)\s*\:\s*([\w$]+)\s*(?:\:\s*([\w$]+))?\s*\}\})/g,
     };
     var cse = {
@@ -34,19 +34,23 @@ function loader__template(tmpl) {
                     (code ? "';}else if(" + unescape(code) + ") {out+='" : "';}else {out+='") :
                     (code ? "';if(" + unescape(code) + ") {out+='" : "';}out+='");
             })
-            .replace(c.transclude, function(m, elsecase, def, argsBody, args) {
+            .replace(c.transclude, function(m, elsecase, code) {
                 function formatCode() {
-                    var code = def;
-                    if (argsBody && /\S+/.test(args)) {
-                        code = code + '(' + args + ', ';
+                    if (!/\)$/.test(code)) {
+                        // {{-page}}, 无argsBody
+                        code = code + '(';
+                    } else if (/\(\s*\)$/.test(code)) {
+                        // {{-bem(page)()}}, 有body, 但是最后一个是空括号
+                        code = code.substr(0, code.length - 1);
                     } else {
-                        code = code + '('
+                        // {{-bem(page)(1)}}, 有body, 也有内容
+                        code = code.substr(0, code.length - 1) + ',';
                     }
                     return code;
                 }
                 return elsecase ?
                     "';return out;})(), (function() {var out='';out+='":
-                    (def ? "';out+=" + unescape(formatCode()) + "(function() {var out=''; out+='" : "';return out;})());out+='");
+                    (code ? "';out+=" + unescape(formatCode()) + "(function() {var out=''; out+='" : "';return out;})());out+='");
             })
             .replace(c.iterate, function(m, iterate, vname, iname) {
                 if (!iterate) return "';} } out+='";

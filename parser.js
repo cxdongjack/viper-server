@@ -24,9 +24,7 @@ function parseAllJS(filepath) {
         }
         _cache.push(filepath);
         var cnt = fs.readFileSync(filepath, 'utf8');
-        console.log('xx---------->', files);
         var files = parseIncluded(cnt);
-        console.log('---------->', files);
         if (files) {
             for (var i = 0, dep; dep = files[i]; i++) {
                 _readDeps(file.abspath(dep, path.dirname(filepath)));

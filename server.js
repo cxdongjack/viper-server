@@ -322,22 +322,11 @@ function speedUpLibJs(req, res, next) {
 function speedUpJs(req, res, next) {
     var filepath = cwd + req.baseUrl;
 
-    console.log('----------1')
-    var fileCnt = file.read(filepath);
-    var includes = parser.parse(fileCnt);
-    var allIncludes = [];
-    var dirname = path.dirname(filepath);
-    if (includes && !/__file/.test(req.originalUrl))  {
-        console.log('----------2')
-
-        allIncludes = parser.parseRecursive(filepath);
-        allIncludes = allIncludes.map(function(includePath) {
-            return path.relative(dirname, includePath);
-        });
-        console.log('----------3', 'include(' + JSON.stringify(allIncludes) + ')')
-
-        // 返回一个include文件
-        return res.send('include(' + JSON.stringify(allIncludes) + ')');
+    if (!/__file/.test(req.originalUrl)) {
+        var entry = generateEntry(filepath);
+        if (entry) {
+            return res.send(entry);
+        }
     }
 
     if (!fs.existsSync(filepath)) {
@@ -347,5 +336,22 @@ function speedUpJs(req, res, next) {
     var cnt = tmpl(fs.readFileSync(path.normalize(filepath), 'utf8'));
 
     res.send(cnt);
-    console.log('----------4')
+}
+
+// *.js在服务器排序, 构建一个入口文件
+function generateEntry(filepath) {
+    var fileCnt = file.read(filepath);
+    var includes = parser.parse(fileCnt);
+    var allIncludes = [];
+    var dirname = path.dirname(filepath);
+    if (includes)  {
+
+        allIncludes = parser.parseRecursive(filepath);
+        allIncludes = allIncludes.map(function(includePath) {
+            return path.relative(dirname, includePath);
+        });
+
+        // 返回一个include文件
+        return 'include(' + JSON.stringify(allIncludes) + ')';
+    }
 }

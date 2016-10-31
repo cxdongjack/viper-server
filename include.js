@@ -22,18 +22,22 @@ function include(srcList) {
     for (i = 0, len = srcList.length; i < len; i++) {
         var url = (srcList[i][0] != '/' ? dirname : '') + srcList[i];
         url = loader__absURL(url);
+        url += '?__file';
         if (loader__cache.indexOf(url) == -1) {
             loader__cache.push(url);
-            if (/\.(tpl|vp|js)$/.test(url)) {
+            if (/\.(tpl|vp|js)(\?|$)/.test(url)) {
                 // vp/js实质上并不会发请求，主要提供定位的功能
                 document.write('\
                     <script src="' + url + '"></script>\
                     ');
-            } else if (/\.css$/.test(url)) {
+            } else if (/\.css(\?|$)/.test(url)) {
                 document.head.insertAdjacentHTML('beforeEnd',
                     '<link type="text/css" rel="stylesheet" href="' + url + '">');
             }
         }
     }
+
+    // 屏蔽include
+    include = function() {}
 }
 

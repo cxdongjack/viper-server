@@ -11,6 +11,7 @@ var httpProxyMiddleware = require("http-proxy-middleware");
 var watch = require('node-watch');
 var tmpl = require("./tmpl");
 var file = require("./file");
+var parser = require("./parser");
 
 var app = express();
 var server = http.createServer(app);
@@ -320,6 +321,25 @@ function speedUpLibJs(req, res, next) {
 // *.js在服务器端转译
 function speedUpJs(req, res, next) {
     var filepath = cwd + req.baseUrl;
+
+    console.log('----------1')
+    var fileCnt = file.read(filepath);
+    var includes = parser.parse(fileCnt);
+    var allIncludes = [];
+    var dirname = path.dirname(filepath);
+    if (includes && !/__file/.test(req.originalUrl))  {
+        console.log('----------2')
+
+        allIncludes = parser.parseRecursive(filepath);
+        allIncludes = allIncludes.map(function(includePath) {
+            return path.relative(dirname, includePath);
+        });
+        console.log('----------3', 'include(' + JSON.stringify(allIncludes) + ')')
+
+        // 返回一个include文件
+        return res.send('include(' + JSON.stringify(allIncludes) + ')');
+    }
+
     if (!fs.existsSync(filepath)) {
         return next();
     }
@@ -327,4 +347,5 @@ function speedUpJs(req, res, next) {
     var cnt = tmpl(fs.readFileSync(path.normalize(filepath), 'utf8'));
 
     res.send(cnt);
+    console.log('----------4')
 }

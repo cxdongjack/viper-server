@@ -22,8 +22,7 @@ function include(srcList) {
     for (i = 0, len = srcList.length; i < len; i++) {
         var url = (srcList[i][0] != '/' ? dirname : '') + srcList[i];
         url = loader__absURL(url);
-        // 特殊逻辑，合并lib/下的文件, 为lib/all.js
-        url = url.replace(/\/lib\/.*\.js$/, '/lib/all.js');
+        // 打上file的标记，和入口文件区别开
         url += '?__file';
         if (loader__cache.indexOf(url) == -1) {
             loader__cache.push(url);

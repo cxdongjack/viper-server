@@ -350,6 +350,10 @@ function generateEntry(filepath) {
         allIncludes = allIncludes.map(function(includePath) {
             return path.relative(dirname, includePath);
         });
+        // 特殊逻辑，合并lib/下的文件, 为lib/all.js
+        allIncludes = allIncludes.filter(function(includePath) {
+            return !(includePath.match(/\/lib\/.*\.js$/) && !includePath.match(/\/lib\/all\.js$/));
+        });
 
         // 返回一个include文件
         return 'include(' + JSON.stringify(allIncludes) + ')';

@@ -1,6 +1,7 @@
 module.exports = {
     entry : '',
     port : 6002,
+    //disableParallel : 1,
     proxy : {
         '/': {
             target: 'http://127.0.0.1:6004',

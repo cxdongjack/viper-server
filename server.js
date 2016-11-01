@@ -322,7 +322,8 @@ function speedUpLibJs(req, res, next) {
 function speedUpJs(req, res, next) {
     var filepath = cwd + req.baseUrl;
 
-    if (!/__file/.test(req.originalUrl)) {
+    // 入口文件特殊处理，返回一个新的文件includeAll([...])
+    if (/__entry/.test(req.originalUrl)) {
         var entry = generateEntry(filepath);
         if (entry) {
             return res.send(entry);
@@ -345,8 +346,9 @@ function generateEntry(filepath) {
     var allIncludes = [];
     var dirname = path.dirname(filepath);
     if (includes)  {
-
+        // 解析所有文件依赖
         allIncludes = parser.parseRecursive(filepath);
+        // 转成相对入口文件的相对路径
         allIncludes = allIncludes.map(function(includePath) {
             return path.relative(dirname, includePath);
         });
@@ -354,8 +356,7 @@ function generateEntry(filepath) {
         allIncludes = allIncludes.filter(function(includePath) {
             return !(includePath.match(/\/lib\/.*\.js$/) && !includePath.match(/\/lib\/all\.js$/));
         });
-
         // 返回一个include文件
-        return 'include(' + JSON.stringify(allIncludes) + ')';
+        return 'includeAll(' + JSON.stringify(allIncludes) + ')';
     }
 }

@@ -36,7 +36,7 @@ console.log('cwd:', cwd, 'port:', port, 'config:', config);
 server.listen(port);
 
 // 增加了open
-open(urlToOpen);
+urlToOpen && open(urlToOpen);
 
 options.watch = options.watch || {};
 var watching = options.watch;

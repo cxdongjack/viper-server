@@ -12,6 +12,7 @@ var watch = require('node-watch');
 var tmpl = require("./tmpl");
 var file = require("./file");
 var parser = require("./parser");
+var open = require("open");
 
 var app = express();
 var server = http.createServer(app);
@@ -27,11 +28,15 @@ try {
 }
 var cwd = process.cwd() + (options.entry ? '/' + options.entry : '');
 var port = options.port || 6007;
+var urlToOpen = options.urlToOpen ||process.argv[4];
 // 禁止并行加载(在服务端预先转译JS文件)
-var disableParallel = options.disableParallel || process.argv[4];
+var disableParallel = options.disableParallel || process.argv[5];
 
 console.log('cwd:', cwd, 'port:', port, 'config:', config);
 server.listen(port);
+
+// 增加了open
+open(urlToOpen);
 
 options.watch = options.watch || {};
 var watching = options.watch;

@@ -83,7 +83,7 @@ app.use('**/all.js', function(req, res, next) {
     if (!fs.existsSync(filepath)) {
         return next();
     }
-    var all = parseAllJS(filepath);
+    var all = parser.parseRecursive(filepath);
 
     var cnt = all.filter(function(filepath) {
         // 忽略all.js中包含的css文件
@@ -115,32 +115,6 @@ if (!hasCSS) {
     res.send(cnt);
 });
 
-function parseAllJS(filepath) {
-    var _cache = [];
-    var deps = [];
-    var include = function(list) {
-        return list;
-    };
-
-    (function _readDeps(filepath) {
-        if (_cache.indexOf(filepath) !== -1) {
-            return;
-        }
-        _cache.push(filepath);
-        var cnt = fs.readFileSync(filepath, 'utf8');
-        if (cnt.indexOf('include([') === 0) {
-            var files = eval(cnt);
-            for (var i = 0, dep; dep = files[i]; i++) {
-                _readDeps(file.abspath(dep, path.dirname(filepath)));
-            }
-        } else {
-            deps.push(filepath);
-        }
-    })(filepath);
-
-    return deps;
-}
-
 // 所有all.css在服务器合并
 app.use('**/all.css', function(req, res, next) {
     // 只有__combo才触发合并
@@ -163,7 +137,7 @@ app.use('**/all.css', function(req, res, next) {
 
     // 提取all.js中包含的css文件
     if (fs.existsSync(jsFilepath)) {
-        cssPaths = cssPaths.concat(parseAllJS(jsFilepath).filter(function(filepath) {
+        cssPaths = cssPaths.concat(parser.parseRecursive(jsFilepath).filter(function(filepath) {
             return /\.css$/.test(filepath);
         }));
     }
@@ -311,7 +285,7 @@ function speedUpLibJs(req, res, next) {
     if (!fs.existsSync(filepath)) {
         return next();
     }
-    var all = parseAllJS(filepath);
+    var all = parser.parseRecursive(filepath);
 
     var cnt = all.filter(function(filepath) {
         // 忽略all.js中包含的css文件

@@ -29,8 +29,9 @@ try {
 var cwd = process.cwd() + (options.entry ? '/' + options.entry : '');
 var port = options.port || 6007;
 var urlToOpen = options.urlToOpen ||process.argv[4];
-// 禁止并行加载(在服务端预先转译JS文件)
-var disableParallel = options.disableParallel || process.argv[5];
+// serverTransformAssets | allHtmlReload     | normal
+// 在服务端预先转译JS文件| 所有html都被watch | 无特殊功能
+var mode = options.mode || process.argv[5] || 'serverTransformAssets';
 
 console.log('cwd:', cwd, 'port:', port, 'config:', config);
 server.listen(port);
@@ -71,6 +72,10 @@ function injectWatcher(req, res) {
 
 app.use('**/index.html', injectWatcher);
 app.use('**/test.html', injectWatcher);
+
+if (mode == 'allHtmlReload') {
+    app.use('**/*.html', injectWatcher);
+}
 
 // 所有all.js在服务器合并
 app.use('**/all.js', function(req, res, next) {
@@ -201,7 +206,7 @@ function parseAllCSS(filepath) {
 }
 
 // 启动加速, 服务器端转译文件
-if (!disableParallel) {
+if (mode == 'serverTransformAssets') {
     app.use('**/include.js', speedUpIncludeJs);
     app.use('**/lib/all.js', speedUpLibJs);
     app.use('**/*.js', speedUpJs);
